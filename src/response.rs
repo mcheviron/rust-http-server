@@ -24,11 +24,12 @@ impl fmt::Display for HttpResponse {
                     ContentType::PlainText(text) => ("text/plain", text),
                     ContentType::Html(html) => ("text/html", html),
                 };
-                let content_length = body.len();
                 write!(
                     f,
                     "HTTP/1.1 200 OK\r\nContent-Type: {}\r\nContent-Length: {}\r\n\r\n{}",
-                    content_type_str, content_length, body
+                    content_type_str,
+                    body.len(),
+                    body
                 )
             }
             HttpResponse::NotFound => write!(f, "HTTP/1.1 404 Not Found\r\n\r\n"),

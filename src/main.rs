@@ -23,6 +23,14 @@ fn handle_echo(request: HttpRequest) -> HttpResponse {
     HttpResponse::NotFound
 }
 
+fn handle_user_agent(request: HttpRequest) -> HttpResponse {
+    if let Some(user_agent) = request.headers.get("User-Agent") {
+        HttpResponse::Ok(ContentType::PlainText(user_agent.to_string()))
+    } else {
+        HttpResponse::NotFound
+    }
+}
+
 fn main() {
     println!("Logs from your program will appear here!");
 
@@ -31,6 +39,7 @@ fn main() {
     let mut router = Router::new();
 
     router.get("/", handle_home);
+    router.get("/user-agent", handle_user_agent);
     router.get("/echo/{str}", handle_echo);
 
     for mut stream in listener.incoming().flatten() {

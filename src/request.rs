@@ -6,7 +6,7 @@ pub struct HttpRequest {
     pub method: HttpMethod,
     pub resource: String,
     pub protocol: HttpProtocol,
-    pub headers: Vec<(String, String)>,
+    pub headers: HashMap<String, String>,
     pub body: String,
     pub params: Option<HashMap<String, String>>,
 }
@@ -44,7 +44,7 @@ pub fn parse_request(request: &str) -> Result<HttpRequest, String> {
         _ => return Err("Unsupported HTTP protocol".to_string()),
     };
 
-    let mut headers = Vec::new();
+    let mut headers = HashMap::new();
     for line in lines.by_ref() {
         if line.is_empty() {
             break;
@@ -60,7 +60,7 @@ pub fn parse_request(request: &str) -> Result<HttpRequest, String> {
             .ok_or("Invalid HTTP header value")?
             .trim()
             .to_string();
-        headers.push((header_name, header_value));
+        headers.insert(header_name, header_value);
     }
 
     let body = lines.collect::<Vec<&str>>().join("\r\n");
