@@ -1,6 +1,7 @@
 use std::collections::HashMap;
-use std::{fmt, path};
+use std::fmt;
 
+#[derive(Debug)]
 pub struct HttpRequest {
     pub method: HttpMethod,
     pub resource: String,
@@ -10,7 +11,7 @@ pub struct HttpRequest {
     pub params: Option<HashMap<String, String>>,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum HttpMethod {
     Get,
     Post,
@@ -18,7 +19,7 @@ pub enum HttpMethod {
     Delete,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum HttpProtocol {
     Http11,
 }

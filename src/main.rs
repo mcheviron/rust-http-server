@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::{io::Read, net::TcpListener};
 
 mod request;
@@ -25,6 +27,7 @@ fn main() {
     println!("Logs from your program will appear here!");
 
     let listener = TcpListener::bind("127.0.0.1:4221").expect("Failed to bind to address");
+    println!("Listening on http://127.0.0.1:4221");
     let mut router = Router::new();
 
     router.get("/", handle_home);
