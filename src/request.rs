@@ -19,30 +19,42 @@ pub enum HttpMethod {
     Delete,
 }
 
+impl From<&str> for HttpMethod {
+    fn from(s: &str) -> Self {
+        match s {
+            "GET" => HttpMethod::Get,
+            "POST" => HttpMethod::Post,
+            "PUT" => HttpMethod::Put,
+            "DELETE" => HttpMethod::Delete,
+            _ => panic!("Unsupported HTTP method"),
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone)]
 pub enum HttpProtocol {
     Http11,
+}
+
+impl From<&str> for HttpProtocol {
+    fn from(s: &str) -> Self {
+        match s {
+            "HTTP/1.1" => HttpProtocol::Http11,
+            _ => panic!("Unsupported HTTP protocol"),
+        }
+    }
 }
 
 pub fn parse_request(request: &str) -> Result<HttpRequest, String> {
     let mut lines = request.split("\r\n");
     let first_line = lines.next().ok_or("Invalid HTTP request")?;
     let mut first_line_parts = first_line.split_whitespace();
-    let method = match first_line_parts.next().ok_or("Invalid HTTP method")? {
-        "GET" => HttpMethod::Get,
-        "POST" => HttpMethod::Post,
-        "PUT" => HttpMethod::Put,
-        "DELETE" => HttpMethod::Delete,
-        _ => return Err("Unsupported HTTP method".to_string()),
-    };
+    let method = HttpMethod::from(first_line_parts.next().ok_or("Invalid HTTP method")?);
     let resource = first_line_parts
         .next()
         .ok_or("Invalid HTTP resource")?
         .to_string();
-    let protocol = match first_line_parts.next().ok_or("Invalid HTTP protocol")? {
-        "HTTP/1.1" => HttpProtocol::Http11,
-        _ => return Err("Unsupported HTTP protocol".to_string()),
-    };
+    let protocol = HttpProtocol::from(first_line_parts.next().ok_or("Invalid HTTP protocol")?);
 
     let mut headers = HashMap::new();
     for line in lines.by_ref() {

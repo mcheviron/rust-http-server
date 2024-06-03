@@ -1,7 +1,13 @@
-use crate::request::{HttpMethod, HttpRequest};
-use crate::response::HttpResponse;
-use std::collections::HashMap;
-use std::hash::{Hash, Hasher};
+use crate::request::{parse_request, HttpMethod, HttpRequest};
+use crate::response::{send_response, HttpResponse};
+use std::{
+    collections::HashMap,
+    hash::{Hash, Hasher},
+    io::Read,
+    net::TcpListener,
+    sync::Arc,
+    thread,
+};
 
 type HandlerFn = fn(HttpRequest) -> HttpResponse;
 
@@ -76,12 +82,14 @@ impl Route {
 
 pub struct Router {
     routes: HashMap<(HttpMethod, Route), HandlerFn>,
+    listener: TcpListener,
 }
 
 impl Router {
-    pub fn new() -> Self {
+    pub fn new(listener: TcpListener) -> Self {
         Router {
             routes: HashMap::new(),
+            listener,
         }
     }
 
@@ -116,6 +124,44 @@ impl Router {
             }
         }
         HttpResponse::NotFound
+    }
+
+    pub fn run(self) {
+        let arc_router = Arc::new(self);
+        for stream in arc_router.listener.incoming() {
+            match stream {
+                Ok(stream) => {
+                    let router = Arc::clone(&arc_router);
+                    thread::spawn(move || {
+                        router.handle_connection(stream);
+                    });
+                }
+                Err(e) => {
+                    println!("Error: {}", e);
+                }
+            }
+        }
+    }
+
+    fn handle_connection(&self, mut stream: std::net::TcpStream) {
+        let mut buffer = [0; 1024];
+        match stream.read(&mut buffer) {
+            Ok(bytes_read) => {
+                let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+                match parse_request(&request) {
+                    Ok(http_request) => {
+                        let response = self.handle_request(http_request);
+                        send_response(&mut stream, response);
+                    }
+                    Err(_) => {
+                        send_response(&mut stream, HttpResponse::NotFound);
+                    }
+                }
+            }
+            Err(e) => {
+                println!("Error reading from stream: {}", e);
+            }
+        }
     }
 }
 
