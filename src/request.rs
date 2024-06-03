@@ -45,46 +45,48 @@ impl From<&str> for HttpProtocol {
     }
 }
 
-pub fn parse_request(request: &str) -> Result<HttpRequest, String> {
-    let mut lines = request.split("\r\n");
-    let first_line = lines.next().ok_or("Invalid HTTP request")?;
-    let mut first_line_parts = first_line.split_whitespace();
-    let method = HttpMethod::from(first_line_parts.next().ok_or("Invalid HTTP method")?);
-    let resource = first_line_parts
-        .next()
-        .ok_or("Invalid HTTP resource")?
-        .to_string();
-    let protocol = HttpProtocol::from(first_line_parts.next().ok_or("Invalid HTTP protocol")?);
+impl From<&str> for HttpRequest {
+    fn from(request: &str) -> Self {
+        let mut lines = request.split("\r\n");
+        let first_line = lines.next().expect("Invalid HTTP request");
+        let mut first_line_parts = first_line.split_whitespace();
+        let method = HttpMethod::from(first_line_parts.next().expect("Invalid HTTP method"));
+        let resource = first_line_parts
+            .next()
+            .expect("Invalid HTTP resource")
+            .to_string();
+        let protocol = HttpProtocol::from(first_line_parts.next().expect("Invalid HTTP protocol"));
 
-    let mut headers = HashMap::new();
-    for line in lines.by_ref() {
-        if line.is_empty() {
-            break;
+        let mut headers = HashMap::new();
+        for line in lines.by_ref() {
+            if line.is_empty() {
+                break;
+            }
+            let mut header_parts = line.split(':');
+            let header_name = header_parts
+                .next()
+                .expect("Invalid HTTP header")
+                .trim()
+                .to_string();
+            let header_value = header_parts
+                .next()
+                .expect("Invalid HTTP header value")
+                .trim()
+                .to_string();
+            headers.insert(header_name, header_value);
         }
-        let mut header_parts = line.split(':');
-        let header_name = header_parts
-            .next()
-            .ok_or("Invalid HTTP header")?
-            .trim()
-            .to_string();
-        let header_value = header_parts
-            .next()
-            .ok_or("Invalid HTTP header value")?
-            .trim()
-            .to_string();
-        headers.insert(header_name, header_value);
+
+        let body = lines.collect::<Vec<&str>>().join("\r\n");
+
+        HttpRequest {
+            method,
+            resource,
+            protocol,
+            headers,
+            body,
+            params: None,
+        }
     }
-
-    let body = lines.collect::<Vec<&str>>().join("\r\n");
-
-    Ok(HttpRequest {
-        method,
-        resource,
-        protocol,
-        headers,
-        body,
-        params: None,
-    })
 }
 
 impl fmt::Display for HttpRequest {

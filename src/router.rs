@@ -1,16 +1,17 @@
-use crate::request::{parse_request, HttpMethod, HttpRequest};
-use crate::response::{send_response, HttpResponse};
+use crate::request::{HttpMethod, HttpRequest};
+use crate::response::{send_response, ContentType, HttpResponse};
 use std::{
     collections::HashMap,
+    fs,
     hash::{Hash, Hasher},
     io::Read,
     net::TcpListener,
+    path::Path,
     sync::Arc,
     thread,
 };
 
-type HandlerFn = fn(HttpRequest) -> HttpResponse;
-
+pub(crate) type HandlerFn = fn(HttpRequest) -> HttpResponse;
 #[derive(Debug, Clone)]
 pub struct Route {
     pub path: String,
@@ -83,13 +84,15 @@ impl Route {
 pub struct Router {
     routes: HashMap<(HttpMethod, Route), HandlerFn>,
     listener: TcpListener,
+    directory: Option<String>,
 }
 
 impl Router {
-    pub fn new(listener: TcpListener) -> Self {
+    pub fn new(listener: TcpListener, directory: Option<String>) -> Self {
         Router {
             routes: HashMap::new(),
             listener,
+            directory,
         }
     }
 
@@ -123,6 +126,17 @@ impl Router {
                 }
             }
         }
+
+        if request.method == HttpMethod::Get && request.resource.starts_with("/files/") {
+            if let Some(directory) = &self.directory {
+                let file_path = Path::new(directory).join(&request.resource[7..]);
+                if file_path.exists() {
+                    let contents = fs::read(file_path).unwrap();
+                    return HttpResponse::Ok(ContentType::OctetStream(contents));
+                }
+            }
+        }
+
         HttpResponse::NotFound
     }
 
@@ -148,15 +162,9 @@ impl Router {
         match stream.read(&mut buffer) {
             Ok(bytes_read) => {
                 let request = String::from_utf8_lossy(&buffer[..bytes_read]);
-                match parse_request(&request) {
-                    Ok(http_request) => {
-                        let response = self.handle_request(http_request);
-                        send_response(&mut stream, response);
-                    }
-                    Err(_) => {
-                        send_response(&mut stream, HttpResponse::NotFound);
-                    }
-                }
+                let http_request = HttpRequest::from(request.as_ref());
+                let response = self.handle_request(http_request);
+                send_response(&mut stream, response);
             }
             Err(e) => {
                 println!("Error reading from stream: {}", e);

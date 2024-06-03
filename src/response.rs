@@ -9,6 +9,7 @@ pub enum HttpResponse {
 pub enum ContentType {
     PlainText(String),
     Html(String),
+    OctetStream(Vec<u8>),
 }
 
 pub fn send_response<W: Write>(stream: &mut W, response: HttpResponse) {
@@ -21,8 +22,12 @@ impl fmt::Display for HttpResponse {
         match self {
             HttpResponse::Ok(content_type) => {
                 let (content_type_str, body) = match content_type {
-                    ContentType::PlainText(text) => ("text/plain", text),
-                    ContentType::Html(html) => ("text/html", html),
+                    ContentType::PlainText(text) => ("text/plain", text.as_str()),
+                    ContentType::Html(html) => ("text/html", html.as_str()),
+                    ContentType::OctetStream(data) => (
+                        "application/octet-stream",
+                        std::str::from_utf8(data).unwrap(),
+                    ),
                 };
                 write!(
                     f,

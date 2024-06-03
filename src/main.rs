@@ -2,6 +2,8 @@ use request::HttpRequest;
 use response::{ContentType, HttpResponse};
 use router::Router;
 use std::net::TcpListener;
+use std::path::Path;
+use std::{env, fs};
 
 mod request;
 mod response;
@@ -32,8 +34,16 @@ fn main() {
     println!("Logs from your program will appear here!");
 
     let listener = TcpListener::bind("127.0.0.1:4221").expect("Failed to bind to address");
+    let args = env::args().collect::<Vec<String>>();
+    let directory = args
+        .iter()
+        .position(|arg| arg == "--directory")
+        .and_then(|index| args.get(index + 1))
+        .cloned();
+
+    let mut router = Router::new(listener, directory);
+
     println!("Listening on http://127.0.0.1:4221");
-    let mut router = Router::new(listener);
 
     router.get("/", handle_home);
     router.get("/user-agent", handle_user_agent);
