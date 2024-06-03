@@ -3,6 +3,7 @@ use std::io::Write;
 
 pub enum HttpResponse {
     Ok(ContentType),
+    Created,
     NotFound,
 }
 
@@ -37,6 +38,7 @@ impl fmt::Display for HttpResponse {
                     body
                 )
             }
+            HttpResponse::Created => write!(f, "HTTP/1.1 201 Created\r\n\r\n"),
             HttpResponse::NotFound => write!(f, "HTTP/1.1 404 Not Found\r\n\r\n"),
         }
     }

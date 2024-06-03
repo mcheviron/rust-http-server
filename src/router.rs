@@ -127,12 +127,21 @@ impl Router {
             }
         }
 
-        if request.method == HttpMethod::Get && request.resource.starts_with("/files/") {
+        if request.resource.starts_with("/files/") {
             if let Some(directory) = &self.directory {
                 let file_path = Path::new(directory).join(&request.resource[7..]);
-                if file_path.exists() {
-                    let contents = fs::read(file_path).unwrap();
-                    return HttpResponse::Ok(ContentType::OctetStream(contents));
+                match request.method {
+                    HttpMethod::Get => {
+                        if file_path.exists() {
+                            let contents = fs::read(file_path).unwrap();
+                            return HttpResponse::Ok(ContentType::OctetStream(contents));
+                        }
+                    }
+                    HttpMethod::Post => {
+                        fs::write(file_path, request.body.as_bytes()).unwrap();
+                        return HttpResponse::Created;
+                    }
+                    _ => {}
                 }
             }
         }
