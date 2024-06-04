@@ -1,5 +1,5 @@
 use crate::request::{HttpMethod, HttpRequest};
-use crate::response::{send_response, ContentType, HttpResponse};
+use crate::response::{send_response, ContentEncoding, ContentType, HttpResponse};
 use std::{
     collections::HashMap,
     fs,
@@ -134,7 +134,19 @@ impl Router {
                     HttpMethod::Get => {
                         if file_path.exists() {
                             let contents = fs::read(file_path).unwrap();
-                            return HttpResponse::Ok(ContentType::OctetStream(contents));
+                            let content_encoding = if request
+                                .headers
+                                .get("Accept-Encoding")
+                                .map_or(false, |v| v.contains("gzip"))
+                            {
+                                Some(ContentEncoding::Gzip)
+                            } else {
+                                None
+                            };
+                            return HttpResponse::Ok(
+                                ContentType::OctetStream(contents),
+                                content_encoding,
+                            );
                         }
                     }
                     HttpMethod::Post => {

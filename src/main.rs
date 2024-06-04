@@ -1,22 +1,35 @@
+#![allow(dead_code)]
+
 use request::HttpRequest;
-use response::{ContentType, HttpResponse};
+use response::{ContentEncoding, ContentType, HttpResponse};
 use router::Router;
+use std::env;
 use std::net::TcpListener;
-use std::path::Path;
-use std::{env, fs};
 
 mod request;
 mod response;
 mod router;
 
 fn handle_home(_request: HttpRequest) -> HttpResponse {
-    HttpResponse::Ok(ContentType::PlainText("".to_string()))
+    HttpResponse::Ok(ContentType::PlainText("".to_string()), None)
 }
 
 fn handle_echo(request: HttpRequest) -> HttpResponse {
     if let Some(params) = request.params {
         if let Some(str_value) = params.get("str") {
-            return HttpResponse::Ok(ContentType::PlainText(str_value.to_string()));
+            let content_encoding = if request
+                .headers
+                .get("Accept-Encoding")
+                .map_or(false, |v| v.contains("gzip"))
+            {
+                Some(ContentEncoding::Gzip)
+            } else {
+                None
+            };
+            return HttpResponse::Ok(
+                ContentType::PlainText(str_value.to_string()),
+                content_encoding,
+            );
         }
     }
     HttpResponse::NotFound
@@ -24,7 +37,19 @@ fn handle_echo(request: HttpRequest) -> HttpResponse {
 
 fn handle_user_agent(request: HttpRequest) -> HttpResponse {
     if let Some(user_agent) = request.headers.get("User-Agent") {
-        HttpResponse::Ok(ContentType::PlainText(user_agent.to_string()))
+        let content_encoding = if request
+            .headers
+            .get("Accept-Encoding")
+            .map_or(false, |v| v.contains("gzip"))
+        {
+            Some(ContentEncoding::Gzip)
+        } else {
+            None
+        };
+        HttpResponse::Ok(
+            ContentType::PlainText(user_agent.to_string()),
+            content_encoding,
+        )
     } else {
         HttpResponse::NotFound
     }
